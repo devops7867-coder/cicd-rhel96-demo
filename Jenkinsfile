@@ -25,7 +25,7 @@ pipeline {
             steps {
                 sh '''
                     python3 -m venv venv
-                    source venv/bin/activate
+                    . venv/bin/activate
                     python -m pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
@@ -35,33 +35,41 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    source venv/bin/activate
+                    . venv/bin/activate
                     python -m pytest -q
                 '''
             }
         }
 
         stage('Build Image') {
-    steps {
-        sh 'sudo podman build -t cicd-rhel96-demo:latest .'
-    }
-}
+            steps {
+                sh '''
+                    sudo podman build -t ${IMAGE_NAME}:latest .
+                '''
+            }
+        }
 
-stage('Deploy to App Server') {
-    steps {
-        sshagent(credentials: ["vm2-ssh-key"]) {
-            sh '''
-                rm -f /tmp/cicd-rhel96-demo.tar
-                sudo podman save --format oci-archive -o /tmp/cicd-rhel96-demo.tar cicd-rhel96-demo:latest
-                scp -o StrictHostKeyChecking=no /tmp/cicd-rhel96-demo.tar devops@192.168.56.20:/tmp/cicd-rhel96-demo.tar
-                ssh -o StrictHostKeyChecking=no devops@192.168.56.20 "
-                    podman load -i /tmp/cicd-rhel96-demo.tar &&
-                    podman stop cicd-rhel96-demo || true &&
-                    podman rm cicd-rhel96-demo || true &&
-                    podman run -d --name cicd-rhel96-demo -p 5000:5000 cicd-rhel96-demo:latest
-                "
-            '''
+        stage('Deploy to App Server') {
+            steps {
+                sshagent(credentials: ["${SSH_CREDENTIALS_ID}"]) {
+                    sh '''
+                        ARCHIVE="${WORKSPACE}/${IMAGE_NAME}-${BUILD_NUMBER}.tar"
+
+                        sudo podman save --format oci-archive -o "$ARCHIVE" ${IMAGE_NAME}:latest
+
+                        scp -o StrictHostKeyChecking=no "$ARCHIVE" ${APP_USER}@${APP_SERVER}:/tmp/${IMAGE_NAME}.tar
+
+                        ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} "
+                            podman load -i /tmp/${IMAGE_NAME}.tar &&
+                            podman stop ${CONTAINER_NAME} || true &&
+                            podman rm ${CONTAINER_NAME} || true &&
+                            podman run -d --name ${CONTAINER_NAME} -p 5000:5000 ${IMAGE_NAME}:latest
+                        "
+
+                        sudo rm -f "$ARCHIVE"
+                    '''
+                }
+            }
         }
     }
-}    }
 }
