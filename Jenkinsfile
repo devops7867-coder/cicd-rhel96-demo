@@ -66,7 +66,7 @@ pipeline {
                             podman run -d --name ${CONTAINER_NAME} -p 5000:5000 ${IMAGE_NAME}:latest
                         "
 
-                        sudo rm -f "$ARCHIVE"
+                        rm -f "$ARCHIVE"
                     '''
                 }
             }
