@@ -7,8 +7,8 @@ pipeline {
     }
 
     environment {
-        APP_SERVER = "YOUR_VM2_IP"
-        APP_USER = "YOUR_VM2_USER"
+        APP_SERVER = "192.168.56.104"
+        APP_USER = "root"
         IMAGE_NAME = "cicd-rhel96-demo"
         CONTAINER_NAME = "cicd-rhel96-demo"
         SSH_CREDENTIALS_ID = "vm2-ssh-key"
