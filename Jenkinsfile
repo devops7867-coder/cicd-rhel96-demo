@@ -42,28 +42,26 @@ pipeline {
         }
 
         stage('Build Image') {
-            steps {
-                sh '''
-                    podman build -t ${IMAGE_NAME}:latest .
-                '''
-            }
-        }
+    steps {
+        sh 'sudo podman build -t cicd-rhel96-demo:latest .'
+    }
+}
 
-        stage('Deploy to App Server') {
-            steps {
-                sshagent(credentials: ["${SSH_CREDENTIALS_ID}"]) {
-                    sh '''
-                        podman save -o /tmp/${IMAGE_NAME}.tar ${IMAGE_NAME}:latest
-                        scp -o StrictHostKeyChecking=no /tmp/${IMAGE_NAME}.tar ${APP_USER}@${APP_SERVER}:/tmp/${IMAGE_NAME}.tar
-                        ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} "
-                            podman load -i /tmp/${IMAGE_NAME}.tar &&
-                            podman stop ${CONTAINER_NAME} || true &&
-                            podman rm ${CONTAINER_NAME} || true &&
-                            podman run -d --name ${CONTAINER_NAME} -p 5000:5000 ${IMAGE_NAME}:latest
-                        "
-                    '''
-                }
-            }
+stage('Deploy to App Server') {
+    steps {
+        sshagent(credentials: ["vm2-ssh-key"]) {
+            sh '''
+                sudo podman save -o /tmp/cicd-rhel96-demo.tar cicd-rhel96-demo:latest
+                scp -o StrictHostKeyChecking=no /tmp/cicd-rhel96-demo.tar ${APP_USER}@${APP_SERVER}:/tmp/cicd-rhel96-demo.tar
+                ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} "
+                    podman load -i /tmp/cicd-rhel96-demo.tar &&
+                    podman stop cicd-rhel96-demo || true &&
+                    podman rm cicd-rhel96-demo || true &&
+                    podman run -d --name cicd-rhel96-demo -p 5000:5000 cicd-rhel96-demo:latest
+                "
+            '''
         }
+    }
+}
     }
 }
