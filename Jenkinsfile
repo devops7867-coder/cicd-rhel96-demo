@@ -51,9 +51,10 @@ stage('Deploy to App Server') {
     steps {
         sshagent(credentials: ["vm2-ssh-key"]) {
             sh '''
-                sudo podman save -o /tmp/cicd-rhel96-demo.tar cicd-rhel96-demo:latest
-                scp -o StrictHostKeyChecking=no /tmp/cicd-rhel96-demo.tar ${APP_USER}@${APP_SERVER}:/tmp/cicd-rhel96-demo.tar
-                ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} "
+                rm -f /tmp/cicd-rhel96-demo.tar
+                sudo podman save --format oci-archive -o /tmp/cicd-rhel96-demo.tar cicd-rhel96-demo:latest
+                scp -o StrictHostKeyChecking=no /tmp/cicd-rhel96-demo.tar devops@192.168.56.20:/tmp/cicd-rhel96-demo.tar
+                ssh -o StrictHostKeyChecking=no devops@192.168.56.20 "
                     podman load -i /tmp/cicd-rhel96-demo.tar &&
                     podman stop cicd-rhel96-demo || true &&
                     podman rm cicd-rhel96-demo || true &&
@@ -62,6 +63,5 @@ stage('Deploy to App Server') {
             '''
         }
     }
-}
-    }
+}    }
 }
